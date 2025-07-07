@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { DollarSign, Users, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,8 +15,35 @@ interface PaymentSplitterProps {
 }
 
 const PaymentSplitter = ({ cart, onSplitCalculated }: PaymentSplitterProps) => {
-  const [splitType, setSplitType] = useState<'even' | 'custom'>('even');
+  const [splitType, setSplitType] = useState<'even' | 'custom' | 'itemBased'>('itemBased');
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
+
+  // Calculate amounts based on who added what items
+  const itemBasedSplits = useMemo(() => {
+    const userTotals: Record<string, number> = {};
+    
+    // Initialize all members with 0
+    cart.members.forEach(member => {
+      userTotals[member.id] = 0;
+    });
+
+    // Calculate total for each user based on items they added
+    cart.items.forEach(item => {
+      const itemTotal = item.price * item.quantity;
+      const numberOfAddedBy = item.addedBy.length;
+      const amountPerAdder = itemTotal / numberOfAddedBy;
+      
+      item.addedBy.forEach(user => {
+        userTotals[user.id] += amountPerAdder;
+      });
+    });
+
+    return cart.members.map(member => ({
+      userId: member.id,
+      amount: userTotals[member.id],
+      type: 'custom' as const
+    }));
+  }, [cart.items, cart.members]);
 
   const calculateEvenSplit = () => {
     const amountPerPerson = cart.totalSpent / cart.members.length;
@@ -36,7 +63,22 @@ const PaymentSplitter = ({ cart, onSplitCalculated }: PaymentSplitterProps) => {
   };
 
   const handleCalculate = () => {
-    const splits = splitType === 'even' ? calculateEvenSplit() : calculateCustomSplit();
+    let splits: PaymentSplit[];
+    
+    switch (splitType) {
+      case 'even':
+        splits = calculateEvenSplit();
+        break;
+      case 'custom':
+        splits = calculateCustomSplit();
+        break;
+      case 'itemBased':
+        splits = itemBasedSplits;
+        break;
+      default:
+        splits = itemBasedSplits;
+    }
+    
     onSplitCalculated(splits);
   };
 
@@ -63,8 +105,38 @@ const PaymentSplitter = ({ cart, onSplitCalculated }: PaymentSplitterProps) => {
           </div>
         </div>
 
-        <RadioGroup value={splitType} onValueChange={(value: 'even' | 'custom') => setSplitType(value)}>
+        <RadioGroup value={splitType} onValueChange={(value: 'even' | 'custom' | 'itemBased') => setSplitType(value)}>
           <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="itemBased" id="itemBased" />
+              <Label htmlFor="itemBased" className="flex items-center gap-2 cursor-pointer">
+                <DollarSign className="w-4 h-4" />
+                Split by Items Added (Recommended)
+              </Label>
+            </div>
+
+            {splitType === 'itemBased' && (
+              <div className="ml-6 space-y-2">
+                {itemBasedSplits.map((split) => {
+                  const member = cart.members.find(m => m.id === split.userId);
+                  return (
+                    <div key={split.userId} className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
+                      <div className="flex items-center gap-2">
+                        <img src={member?.avatar} alt={member?.name} className="w-6 h-6 rounded-full" />
+                        <span>{member?.name}</span>
+                      </div>
+                      <span className="font-semibold text-green-700">
+                        ${split.amount.toFixed(2)}
+                      </span>
+                    </div>
+                  );
+                })}
+                <div className="text-xs text-muted-foreground mt-2">
+                  * Amount calculated based on items each person added to the cart
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="even" id="even" />
               <Label htmlFor="even" className="flex items-center gap-2 cursor-pointer">

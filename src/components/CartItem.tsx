@@ -26,8 +26,27 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }: CartItemProps) => {
           
           <div className="flex-1 min-w-0">
             <div className="flex justify-between items-start mb-2">
-              <div>
-                <h3 className="font-semibold text-lg truncate">{item.name}</h3>
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-1">
+                  <h3 className="font-semibold text-lg truncate">{item.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Added by:</span>
+                    <div className="flex -space-x-1">
+                      {item.addedBy.map((user) => (
+                        <div key={user.id} className="relative group">
+                          <img
+                            src={user.avatar}
+                            alt={user.name}
+                            className="w-6 h-6 rounded-full border-2 border-white shadow-sm hover:z-10 hover:scale-110 transition-transform cursor-pointer"
+                          />
+                          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20">
+                            {user.name}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
                 <Badge variant="outline" className="mt-1">
                   {item.category}
                 </Badge>
@@ -77,21 +96,6 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }: CartItemProps) => {
                 <div className="text-sm text-muted-foreground">
                   ${item.price.toFixed(2)} each
                 </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 mt-3">
-              <span className="text-sm text-muted-foreground">Added by:</span>
-              <div className="flex -space-x-1">
-                {item.addedBy.map((user) => (
-                  <img
-                    key={user.id}
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-6 h-6 rounded-full border-2 border-white shadow-sm hover:z-10 hover:scale-110 transition-transform"
-                    title={user.name}
-                  />
-                ))}
               </div>
             </div>
           </div>
